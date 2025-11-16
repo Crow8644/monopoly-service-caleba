@@ -44,7 +44,7 @@ import pgPromise from 'pg-promise';
 
 // Import types for compile-time checking.
 import type { Request, Response, NextFunction } from 'express';
-import type { Player, PlayerInput } from './player.js';
+import type { Player, PlayerInput, Game } from './player.js';
 
 // Set up the database
 const db = pgPromise()({
@@ -67,6 +67,10 @@ router.get('/players/:id', readPlayer);
 router.put('/players/:id', updatePlayer);
 router.post('/players', createPlayer);
 router.delete('/players/:id', deletePlayer);
+router.get('/games', readGames);
+router.get('/games/:id', readGame);
+router.delete('/game/:id', deleteGame);
+
 
 // For testing only; vulnerable to SQL injection!
 // router.get('/bad/players/:id', readPlayerBad);
@@ -127,11 +131,38 @@ function readPlayers(_request: Request, response: Response, next: NextFunction):
 }
 
 /**
+ * Retrieves all games from the database.
+ */
+function readGames(_request: Request, response: Response, next: NextFunction): void {
+    db.manyOrNone('SELECT * FROM Game')
+        .then((data: Game[]): void => {
+            // data is a list, never null, so returnDataOr404 isn't needed.
+            response.send(data);
+        })
+        .catch((error: Error): void => {
+            next(error);
+        });
+}
+
+/**
  * Retrieves a specific player by ID.
  */
 function readPlayer(request: Request, response: Response, next: NextFunction): void {
     db.oneOrNone('SELECT * FROM Player WHERE id=${id}', request.params)
         .then((data: Player | null): void => {
+            returnDataOr404(response, data);
+        })
+        .catch((error: Error): void => {
+            next(error);
+        });
+}
+
+/**
+ * Retrieves a specific player by ID.
+ */
+function readGame(request: Request, response: Response, next: NextFunction): void {
+    db.oneOrNone('SELECT * FROM Game WHERE id=${id}', request.params)
+        .then((data: Game | null): void => {
             returnDataOr404(response, data);
         })
         .catch((error: Error): void => {
@@ -210,6 +241,21 @@ function deletePlayer(request: Request, response: Response, next: NextFunction):
         return t.none('DELETE FROM PlayerGame WHERE playerID=${id}', request.params)
             .then(() => {
                 return t.oneOrNone('DELETE FROM Player WHERE id=${id} RETURNING id', request.params);
+            });
+    })
+        .then((data: { id: number } | null): void => {
+            returnDataOr404(response, data);
+        })
+        .catch((error: Error): void => {
+            next(error);
+        });
+}
+
+function deleteGame(request: Request, response: Response, next: NextFunction): void {
+    db.tx((t) => {
+        return t.none('DELETE FROM PlayerGame WHERE gameID=${id}', request.params)
+            .then(() => {
+                return t.oneOrNone('DELETE FROM Game WHERE id=${id} RETURNING id', request.params);
             });
     })
         .then((data: { id: number } | null): void => {
