@@ -69,6 +69,7 @@ router.post('/players', createPlayer);
 router.delete('/players/:id', deletePlayer);
 router.get('/games', readGames);
 router.get('/games/:id', readGame);
+router.get('/games/players/:id', readGamePlayers)
 router.delete('/game/:id', deleteGame);
 
 
@@ -158,12 +159,26 @@ function readPlayer(request: Request, response: Response, next: NextFunction): v
 }
 
 /**
- * Retrieves a specific player by ID.
+ * Retrieves a specific game by ID.
  */
 function readGame(request: Request, response: Response, next: NextFunction): void {
     db.oneOrNone('SELECT * FROM Game WHERE id=${id}', request.params)
         .then((data: Game | null): void => {
             returnDataOr404(response, data);
+        })
+        .catch((error: Error): void => {
+            next(error);
+        });
+}
+
+/**
+ * Retrieves a specific the players for a particular game by id
+ */
+function readGamePlayers(request: Request, response: Response, next: NextFunction): void {
+    db.manyOrNone('SELECT Player.* FROM Game, Player, PlayerGame WHERE Player.id=PlayerGame.playerID AND Game.id=PlayerGame.gameID AND game.id=${id}', request.params)
+        .then((data: Player[]): void => {
+            // data is a list, never null, so returnDataOr404 isn't needed.
+            response.send(data);
         })
         .catch((error: Error): void => {
             next(error);

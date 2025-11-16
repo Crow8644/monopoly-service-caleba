@@ -13,6 +13,8 @@ Based on this URL, the service implements the following endpoints:
 - `/players/:id` &mdash; the single player with the given ID (e.g., `/players/1`)
 - `/games` &mdash; the full list of games
 - `/games/:id` &mdash; the single game with the given ID
+- `/games/:id/players` &mdash; the players for a particular game
+
 
 Also, it gives the following responses:
 
